@@ -2,3 +2,4 @@
 *.json
 *.log
 .scrapy
+__pycache__
