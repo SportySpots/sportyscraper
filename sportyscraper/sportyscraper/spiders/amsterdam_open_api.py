@@ -69,7 +69,8 @@ class AmsterdamOpenApiSpider(scrapy.Spider):
             request.meta['item'] = item
             yield request
 
-    def parse_spot_details(self, response):
+    @staticmethod
+    def parse_spot_details(response):
         item = response.meta['item']
         rows = response.css('tr')
         item['attributes'] = list()
