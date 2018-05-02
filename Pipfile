@@ -9,6 +9,8 @@ name = "pypi"
 
 scrapy = "*"
 requests = "*"
+coreapi = "*"
+docopt = "*"
 
 
 [dev-packages]
