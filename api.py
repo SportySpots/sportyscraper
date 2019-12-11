@@ -54,7 +54,7 @@ class Importer:
             # 'email': 'admin@sportyspots.com',
             "password": "changeme",
         }
-        response = self.requests.post("{}/auth/login/".format(self.HOST), data=params)
+        response = self.requests.post(f"{self.HOST}/auth/login/", data=params)
 
         json_response = response.json()
         print(json_response)
@@ -64,7 +64,7 @@ class Importer:
 
         self.requests.headers.update(
             {
-                "Authorization": "JWT {}".format(jwt_token),
+                "Authorization": f"JWT {jwt_token}",
                 # 'X-CSRFToken': '{}'.format(csrf_token)
             }
         )
@@ -96,6 +96,7 @@ class Importer:
 
             for spot in data:
                 # sleep(1)
+
                 # Address
                 lat = spot["lat"]
                 lng = spot["lng"]
@@ -140,7 +141,7 @@ class Importer:
 
                 # create spot
                 spot_response = self.requests.post(
-                    "{}/spots/".format(self.HOST), data=spot_params
+                    f"{self.HOST}/spots/", data=spot_params
                 )
                 spot_details = spot_response.json()
                 print(spot_response.text)
@@ -154,7 +155,7 @@ class Importer:
                     "formatted_address": spot_address["formatted_address"],
                 }
                 address_response = self.requests.post(
-                    "{}/spots/{}/address/".format(self.HOST, str(spot_details["uuid"])),
+                    f"{self.HOST}/spots/{str(spot_details['uuid'])}/address/",
                     json=address_params,
                 )
                 print(address_response.text)
@@ -163,7 +164,7 @@ class Importer:
                 sport_params = {"uuid": self.SPORT_MAPPING[spot["sport"]]}
                 # TODO: Log error when response status code is not 201
                 sport_response = self.requests.post(
-                    "{}/spots/{}/sports/".format(self.HOST, str(spot_details["uuid"])),
+                    f"{self.HOST}/spots/{str(spot_details['uuid'])}/sports/",
                     json=sport_params,
                 )
                 print(sport_response.text)
@@ -172,25 +173,21 @@ class Importer:
                 image_url = spot.get("image", None)
                 if image_url:
                     filename = image_url.split("/")[-1]
-                    file_downloaded = os.path.isfile("files/images/{}".format(filename))
+                    file_downloaded = os.path.isfile(f"files/images/{filename}")
 
                     if not file_downloaded:
                         r = requests.get(image_url, timeout=5)
                         if r.status_code == 200:
-                            with open("files/images/{}".format(filename), "wb+") as f:
+                            with open(f"files/images/{filename}", "wb+") as f:
                                 f.write(r.content)
 
                     # reconfirm if file was downloaded
-                    if os.path.isfile("files/images/{}".format(filename)):
+                    if os.path.isfile(f"files/images/{filename}"):
                         files = {
-                            "image": open("files/images/{}".format(filename), "rb")
+                            "image": open(f"files/images/{filename}", "rb")
                         }
                         image_response = self.requests.post(
-                            "{}/spots/{}/sports/{}/images/".format(
-                                self.HOST,
-                                str(spot_details["uuid"]),
-                                self.SPORT_MAPPING[spot["sport"]],
-                            ),
+                            f"{self.HOST}/spots/{str(spot_details['uuid'])}/sports/{self.SPORT_MAPPING[spot['sport']]}/images/",
                             files=files,
                         )
                         print(image_response.text)
