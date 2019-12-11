@@ -11,6 +11,7 @@ docopt = "==0.6.2"
 googlemaps = "==3.1.4"
 
 [dev-packages]
+black = "==19.10b0"
 
 [requires]
 python_version = "3.6"
