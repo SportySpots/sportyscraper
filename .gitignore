@@ -3,3 +3,4 @@
 *.log
 .scrapy
 __pycache__
+files

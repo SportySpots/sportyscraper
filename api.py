@@ -19,10 +19,15 @@ from __future__ import unicode_literals, print_function
 from docopt import docopt
 import requests
 import json
+import googlemaps
+from time import sleep
+import os
 
 __version__ = "0.1"
 __author__ = "Ashutosh Bandiwdekar"
 __license__ = "MIT"
+
+gmaps = googlemaps.Client(key='AIzaSyBx6FrEC34yo04MmZtLW78n8Z8xi0GJlCM')
 
 
 class Importer:
@@ -46,22 +51,20 @@ class Importer:
     def login(self):
         params = {
             'username': 'admin',
-            'email': 'admin@example.com',
+            # 'email': 'admin@sportyspots.com',
             'password': 'changeme'
         }
         response = self.requests.post('{}/auth/login/'.format(self.HOST), data=params)
 
         json_response = response.json()
+        print(json_response)
 
-        csrf_token = response.cookies['csrftoken']
         jwt_token = json_response['token']
-
-        print('JWT TOKEN: {}'.format(jwt_token))
-        print('CSRF TOKEN: {}'.format(csrf_token))
+        # csrf_token = response.cookies.get('csrftoken', default='')
 
         self.requests.headers.update({
             'Authorization': 'JWT {}'.format(jwt_token),
-            'X-CSRFToken': '{}'.format(csrf_token)
+            # 'X-CSRFToken': '{}'.format(csrf_token)
         })
 
         return json_response
@@ -73,69 +76,109 @@ class Importer:
                 return data['value']
         return ''
 
-    def _get_sport_uuid(self, sport):
-        return self.SPORT_MAPPING[sport]
-
-    def create_spot(self, spot):
-        # TODO: Make this interactive by retreving data from the api
-
-
-        data = {
-            'name': spot['label'].title(),
-            'owner': 'Gementee Amsterdam',
-            'description': self._get_spot_attribute(spot, 'Omschrijving'),
-            'homepage_url': 'https://www.amsterdam.nl/'
-        }
-        # {'FITNESS', 'BEACHVOLLEY', 'BASKETBAL', 'VOETBAL', 'JEUDEBOULES', 'SKATE', 'TENNIS', 'OVERIG'}
-        # {'Sportvoorziening': {'Beachvolley', 'Skate', 'Basketbal', 'Tennis', 'Fitness / Bootcamp', 'Overig',
-        # 'Jeu de boules', 'Voetbal'}, 'Locatie': {'Park', 'Sportpark', 'Dak sporthal', 'Straat', 'Speeltuin',
-        # 'Plantsoen', 'Plein', 'Sportveld', 'Schoolplein'}, 'Omheining': {'Gedeeltelijk', 'Hekwerk', 'Kooi',
-        # 'Hekwerk laag', 'Kooi gesloten', 'Ballenvangers', 'Veldafscheiding', 'Kooi open', 'Geen'},
-        # 'Ondergrond': {'Stoeptegels', 'Asfalt', 'Klinkers', 'Onverhard', 'Tegels', 'Gras', 'Zand', 'Kunstgras',
-        # 'Beton'}, 'Verlichting': {'Ja', 'Nee'}}
-        pass
+    # {'FITNESS', 'BEACHVOLLEY', 'BASKETBAL', 'VOETBAL', 'JEUDEBOULES', 'SKATE', 'TENNIS', 'OVERIG'}
+    # {'Sportvoorziening': {'Beachvolley', 'Skate', 'Basketbal', 'Tennis', 'Fitness / Bootcamp', 'Overig',
+    # 'Jeu de boules', 'Voetbal'}, 'Locatie': {'Park', 'Sportpark', 'Dak sporthal', 'Straat', 'Speeltuin',
+    # 'Plantsoen', 'Plein', 'Sportveld', 'Schoolplein'}, 'Omheining': {'Gedeeltelijk', 'Hekwerk', 'Kooi',
+    # 'Hekwerk laag', 'Kooi gesloten', 'Ballenvangers', 'Veldafscheiding', 'Kooi open', 'Geen'},
+    # 'Ondergrond': {'Stoeptegels', 'Asfalt', 'Klinkers', 'Onverhard', 'Tegels', 'Gras', 'Zand', 'Kunstgras',
+    # 'Beton'}, 'Verlichting': {'Ja', 'Nee'}}
 
     def start_import(self):
+        pass
+        # TODO: Throw error if login failed
         login_response = self.login()
 
         with open('sportyscraper/spots.json', encoding='utf-8') as data_file:
             data = json.loads(data_file.read())
 
-            # sports = set()
-            # all_attributes = {}
-            counter = 0
             for spot in data:
-                if counter == 0:
-                    spot_params = {
-                        'name': spot['label'].title(),
-                        'address': {
-                            'lat': str(spot['lat']),
-                            'lng': str(spot['lng'])
-                        },
-                        'owner': 'Geemente Amsterdam',
-                        'description': self._get_spot_attribute(spot, 'Omschrijving'),
-                        'homepage_url': 'https://www.amsterdam.nl'
-                    }
-                    print('Authorization: {}'.format(self.requests.headers.get('Authorization', None)))
-                    print('X-CSRFToken: {}'.format(self.requests.headers.get('X-CSRFToken', None)))
-                    spot_response = self.requests.post('{}/spots/'.format(self.HOST), data=spot_params)
-                    spot_details = spot_response.json()
+                # sleep(1)
+                # Address
+                lat = spot['lat']
+                lng = spot['lng']
+                with open('files/amsterdam-addresses.json', 'r+', encoding='utf-8') as address_file:
+                    spot_address = None
+                    # Search for address in pre-computed addresses file
+                    for line in address_file:
+                        if line:
+                            address = json.loads(line)
+                            if address['lat'] == str(lat) and address['lng'] == str(lng):
+                                raw_geocode_response = address['raw_data']
+                                spot_address = address['raw_data'][0]
+                                break
 
-                    sport_params = {
-                        'uuid': self._get_sport_uuid(spot['sport'])
-                    }
-                    spot_sport_response = self.requests.post('{}/spots/{}/sports/'.format(self.HOST,
-                                                                                          str(spot_details['uuid'])),
-                                                             json=sport_params)
+                    # Reverse geocode if lat,lng wasnt found in the pre-computed addresses file
+                    if not spot_address:
+                        reverse_geocode_result = gmaps.reverse_geocode((lat, lng))
+                        address_file.write(json.dumps({
+                            'lat': str(lat),
+                            'lng': str(lng),
+                            'raw_data': reverse_geocode_result
+                        }) + '\n')
+                        spot_address = reverse_geocode_result[0]
+                        raw_geocode_response = reverse_geocode_result
+                        sleep(5)
 
-                # sports.add(sport['sport'])
-                # for attribute in sport['attributes']:
-                #     if attribute['attribute_name'] not in ['Omschrijving', 'Oppervlak']:
-                #         all_attributes.setdefault(attribute['attribute_name'], set()).add(attribute['value'])
+                spot_params = {
+                    'name': spot['label'].title(),
+                    'owner': 'Geemente Amsterdam',
+                    'description': self._get_spot_attribute(spot, 'Omschrijving'),
+                    'homepage_url': 'https://www.amsterdam.nl'
+                }
+
+                # create spot
+                spot_response = self.requests.post('{}/spots/'.format(self.HOST), data=spot_params)
+                spot_details = spot_response.json()
+                print(spot_response.text)
+
+                # create address
+                address_params = {
+                        'lat': str(lat),
+                        'lng': str(lng),
+                        'geocoder_service': 'google',
+                        'raw_geocoder_response': raw_geocode_response,
+                        'formatted_address': spot_address['formatted_address'],
+                }
+                address_response = self.requests.post('{}/spots/{}/address/'.format(self.HOST,
+                                                                                    str(spot_details['uuid'])),
+                                                      json=address_params)
+                print(address_response.text)
+
+                # associate sport with the spot
+                sport_params = {
+                   'uuid': self.SPORT_MAPPING[spot['sport']]
+                }
+                # TODO: Log error when response status code is not 201
+                sport_response = self.requests.post('{}/spots/{}/sports/'.format(self.HOST,
+                                                                                 str(spot_details['uuid'])),
+                                                    json=sport_params)
+                print(sport_response.text)
+
+                # Download image
+                image_url = spot.get('image', None)
+                if image_url:
+                    filename = image_url.split("/")[-1]
+                    file_downloaded = os.path.isfile('files/images/{}'.format(filename))
+
+                    if not file_downloaded:
+                        r = requests.get(image_url, timeout=5)
+                        if r.status_code == 200:
+                            with open('files/images/{}'.format(filename), 'wb+') as f:
+                                f.write(r.content)
+
+                    # reconfirm if file was downloaded
+                    if os.path.isfile('files/images/{}'.format(filename)):
+                        files = {'image': open('files/images/{}'.format(filename), 'rb')}
+                        image_response = self.requests.post('{}/spots/{}/sports/{}/images/'
+                                                            .format(self.HOST,
+                                                                    str(spot_details['uuid']),
+                                                                    self.SPORT_MAPPING[spot['sport']]),
+                                                            files=files)
+                        print(image_response.text)
 
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version=__version__)
-    print(arguments)
     importer = Importer(arguments['FILE'])
     importer.start_import()
