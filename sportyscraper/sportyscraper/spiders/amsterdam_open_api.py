@@ -2,6 +2,8 @@
 import scrapy
 import json
 
+from ..items import Spot
+
 legend = dict()
 legend["SPORT_OPENBAAR_SKATE"] = [
     "_php/haal_objecten.php?TABEL=SPORT_OPENBAAR&SELECT=SKATE&SELECTIEKOLOM=SELECTIE",
@@ -69,21 +71,9 @@ legend["SPORT_OPENBAAR_OVERIG"] = [
 # legend[''] = ['_php/haal_objecten.php?TABEL=STADSDELEN_LIJN','STADSDELEN_LIJN','','','STADSDELEN_LIJN']
 
 
-class Spot(scrapy.Item):
-    id = scrapy.Field(serializer=int)
-    label = scrapy.Field(serializer=str)
-    lat = scrapy.Field()
-    lng = scrapy.Field()
-    type = scrapy.Field(serializer=str)
-    sport = scrapy.Field(serializer=str)
-    attributes = scrapy.Field()
-    image = scrapy.Field(serializer=str)
-
-
 class AmsterdamOpenApiSpider(scrapy.Spider):
     name = "amsterdam_open_api"
     allowed_domains = ["maps.amsterdam.nl"]
-    # start_urls = ['https://maps.amsterdam.nl/']
     DOMAIN = "https://maps.amsterdam.nl"
 
     def parse(self, response):
@@ -111,7 +101,7 @@ class AmsterdamOpenApiSpider(scrapy.Spider):
             item["lat"] = spot["LATMAX"]
             item["lng"] = spot["LNGMAX"]
             item["type"] = spot["TYPE"]
-            item["sport"] = spot["SELECTIE"]
+            item["sports"] = spot["SELECTIE"]
 
             request = scrapy.Request(
                 f"https://maps.amsterdam.nl/_php/haal_info.php?VOLGNR={spot['VOLGNR']}&THEMA=sport&TABEL=SPORT_OPENBAAR",
