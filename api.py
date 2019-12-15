@@ -183,9 +183,7 @@ class Importer:
 
                     # reconfirm if file was downloaded
                     if os.path.isfile(f"files/images/{filename}"):
-                        files = {
-                            "image": open(f"files/images/{filename}", "rb")
-                        }
+                        files = {"image": open(f"files/images/{filename}", "rb")}
                         image_response = self.requests.post(
                             f"{self.HOST}/spots/{str(spot_details['uuid'])}/sports/{self.SPORT_MAPPING[spot['sport']]}/images/",
                             files=files,

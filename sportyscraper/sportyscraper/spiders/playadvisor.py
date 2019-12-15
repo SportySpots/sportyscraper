@@ -21,11 +21,10 @@ class PlayAdvisorSpider(scrapy.Spider):
             item["sports"] = spot.xpath("@class").re(r"speelplektype-(\S*)")
 
             # Get additional details
-            spot_detail_url = spot.css("article header.entry-header h2.entry-title a::attr(href)").get()
-            request = scrapy.Request(
-                spot_detail_url,
-                callback=self.parse_spot_details,
-            )
+            spot_detail_url = spot.css(
+                "article header.entry-header h2.entry-title a::attr(href)"
+            ).get()
+            request = scrapy.Request(spot_detail_url, callback=self.parse_spot_details,)
             request.meta["item"] = item
             yield request
 
@@ -58,14 +57,15 @@ class PlayAdvisorSpider(scrapy.Spider):
         item["attributes"] = list()
         address = response.css("div#speelplek-location p::text").get() or ""
         city = response.css("div#speelplek-location p a::text").get() or ""
-        item["attributes"].append({
-            "attribute_name": "formatted_address",
-            "value": f"{address} {city}"
-        })
+        item["attributes"].append(
+            {"attribute_name": "formatted_address", "value": f"{address} {city}"}
+        )
 
         # REF: https://playadvisor.co/speelplek/outdoor-fitness-toestellen/skatebaan-in-burgemeester-t-veldpark/?_sft_speelplektype=sport-fitness&_sf_s&_sft_land=nederland
-        item["attributes"].append({
-            "attribute_name": "url",
-            "value": urljoin(response.url, urlparse(response.url).path),
-        })
+        item["attributes"].append(
+            {
+                "attribute_name": "url",
+                "value": urljoin(response.url, urlparse(response.url).path),
+            }
+        )
         yield item
