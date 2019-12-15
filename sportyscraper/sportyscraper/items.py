@@ -8,7 +8,12 @@
 import scrapy
 
 
-class SportyscraperItem(scrapy.Item):
-    # define the fields for your item here like:
-    # name = scrapy.Field()
-    pass
+class Spot(scrapy.Item):
+    id = scrapy.Field(serializer=int)
+    label = scrapy.Field(serializer=str)
+    description = scrapy.Field(serializer=str)
+    lat = scrapy.Field()
+    lng = scrapy.Field()
+    sports = scrapy.Field(default=[])
+    images = scrapy.Field(default=[])
+    attributes = scrapy.Field()
