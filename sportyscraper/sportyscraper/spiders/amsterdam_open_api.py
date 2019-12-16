@@ -100,8 +100,8 @@ class AmsterdamOpenApiSpider(scrapy.Spider):
             item["label"] = spot["LABEL"]
             item["lat"] = spot["LATMAX"]
             item["lng"] = spot["LNGMAX"]
-            item["type"] = spot["TYPE"]
-            item["sports"] = spot["SELECTIE"]
+            item["sports"] = []
+            item["sports"].append(spot["SELECTIE"])
 
             request = scrapy.Request(
                 f"https://maps.amsterdam.nl/_php/haal_info.php?VOLGNR={spot['VOLGNR']}&THEMA=sport&TABEL=SPORT_OPENBAAR",
@@ -119,9 +119,13 @@ class AmsterdamOpenApiSpider(scrapy.Spider):
             field = row.css("td.veld::text").extract()[0]
             if field == "\xa0":
                 value = row.css("img::attr(src)").extract()[0]
-                item["image"] = value
+                item["images"] = []
+                item["images"].append(value)
             else:
                 value = row.css(".waarde::text").extract()[0]
-                item["attributes"].append({"attribute_name": field, "value": value})
+                if field == "Omschrijving":
+                    item["description"] = value
+                else:
+                    item["attributes"].append({"attribute_name": field, "value": value})
 
         yield item
